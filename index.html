@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ferramenta de Registro de Ponto + Apoio</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --holiday: #fef2f2;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --gold: #b48a05;
+        }
+
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; color: var(--text); }
+        .app-container { width: 95%; max-width: 450px; background: white; padding: 25px; margin: 20px 0; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; }
+        .hidden { display: none !important; }
+        
+        h1, h2 { text-align: center; color: var(--primary); margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; transition: 0.2s; font-size: 1rem; text-decoration: none; display: block; text-align: center; }
+        .btn-primary { background: var(--primary); }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        .btn-gray { background: #64748b; }
+        .btn-support { background: var(--gold); margin-top: 20px; box-shadow: 0 4px 6px rgba(180, 138, 5, 0.2); }
+        .btn:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+        .btn:active { transform: scale(0.98); }
+
+        #relogio { font-size: 3rem; text-align: center; font-weight: bold; margin: 15px 0; color: var(--primary); font-family: 'Courier New', Courier, monospace; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 15px; }
+        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: center; }
+        th { background: #f1f5f9; color: var(--primary); text-transform: uppercase; font-size: 0.65rem; }
+        .fds { background: #f8fafc; color: #94a3b8; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+            .app-container { width: 100%; max-width: 100%; box-shadow: none; margin: 0; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="telaLogin" class="app-container">
+        <h1>Registro de Ponto</h1>
+        <p style="text-align:center; margin-bottom: 25px; color: #64748b;">Controle de Frequência 2026</p>
+        <label>Nome Completo</label>
+        <input type="text" id="nomeUser" placeholder="Ex: Maria Souza">
+        <label>CPF</label>
+        <input type="text" id="cpfUser" placeholder="000.000.000-00">
+        <button class="btn btn-primary" onclick="entrar()">ACESSAR SISTEMA</button>
+        
+        <a href="https://mpago.la/2DQcVfh" target="_blank" class="btn btn-support">⭐ APOIAR NOSSO PROJETO</a>
+    </div>
+
+    <div id="telaPainel" class="app-container hidden">
+        <h2 id="saudacao">Olá</h2>
+        <div id="relogio">00:00:00</div>
+        
+        <div style="background:#f1f5f9; padding:15px; border-radius:10px; margin-bottom:20px; border: 1px solid #cbd5e1;">
+            <strong>Status de Hoje:</strong>
+            <div id="infoEntrada" style="margin-top:5px;">Entrada: --:--</div>
+            <div id="infoSaida">Saída: --:--</div>
+        </div>
+
+        <button id="btnEntrada" class="btn btn-success" onclick="tentarRegistrar('Entrada')">REGISTRAR ENTRADA</button>
+        <button id="btnSaida" class="btn btn-danger" onclick="tentarRegistrar('Saída')">REGISTRAR SAÍDA</button>
+        <button class="btn btn-gray" onclick="abrirRelatorio()">GERAR RELATÓRIO PDF</button>
+        <button id="btnSair" class="btn" style="background:none; color:#94a3b8; font-size:0.8rem; margin-top:10px;">Sair / Trocar Usuário</button>
+    </div>
+
+    <div id="telaRelatorio" class="app-container hidden" style="max-width: 800px;">
+        <button class="btn btn-gray no-print" onclick="voltar()">← Voltar</button>
+        
+        <div id="folha">
+            <h2 style="margin-bottom:0">Folha de Registro de Ponto</h2>
+            <p style="text-align:center; margin-top:5px; font-size:0.85rem; border-bottom: 1px solid #eee; padding-bottom: 10px;">Controle Interno - Traço&Tinta</p>
+            
+            <div id="dadosFunc" style="margin: 20px 0; line-height: 1.6; background: #fafafa; padding: 10px; border-radius: 5px; font-size: 0.9rem;"></div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Data</th>
+                        <th style="width: 10%;">Dia</th>
+                        <th style="width: 20%;">Entrada</th>
+                        <th style="width: 20%;">Saída</th>
+                        <th style="width: 25%;">Observação</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoFolha"></tbody>
+            </table>
+
+            <div style="margin-top:50px; display: flex; justify-content: space-around;">
+                <div style="text-align:center; width: 45%; border-top: 1px solid #000; font-size: 0.75rem; padding-top: 5px;">
+                    <b>Assinatura do Colaborador</b><br>
+                    <span id="assinaturaNome"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="no-print" style="margin-top:30px; border-top: 1px dashed #ccc; padding-top: 20px;">
+            <p style="text-align:center; font-size: 0.9rem; color: #64748b;">Gostou da facilidade? Contribua com a manutenção deste projeto!</p>
+            <a href="https://mpago.la/2DQcVfh" target="_blank" class="btn btn-support">💎 APOIAR PROJETO</a>
+            <button class="btn btn-primary" style="margin-top:10px" onclick="window.print()">IMPRIMIR RELATÓRIO</button>
+        </div>
+    </div>
+
+    <script>
+        let user = JSON.parse(localStorage.getItem('user_ponto_final'));
+        const feriadosFixos = {'01/01':'Confraternização','21/04':'Tiradentes','01/05':'Dia do Trabalho','11/08':'Dia do Advogado','07/09':'Independência','12/10':'Nsa. Sra. Aparecida','01/11':'Todos os Santos','02/11':'Finados','15/11':'República','08/12':'Dia da Justiça','25/12':'Natal'};
+
+        setInterval(() => {
+            const rel = document.getElementById('relogio');
+            if(rel) rel.textContent = new Date().toLocaleTimeString('pt-br');
+        }, 1000);
+
+        function entrar() {
+            const n = document.getElementById('nomeUser').value;
+            const c = document.getElementById('cpfUser').value;
+            if(!n || !c) return alert("Informe Nome e CPF.");
+            user = { nome: n, cpf: c };
+            localStorage.setItem('user_ponto_final', JSON.stringify(user));
+            abrirPainel();
+        }
+
+        function abrirPainel() {
+            document.getElementById('telaLogin').classList.add('hidden');
+            document.getElementById('telaRelatorio').classList.add('hidden');
+            document.getElementById('telaPainel').classList.remove('hidden');
+            document.getElementById('saudacao').textContent = `Olá, ${user.nome.split(' ')[0]}!`;
+            atualizarStatus();
+        }
+
+        function tentarRegistrar(tipo) {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    efetivarRegistro(tipo, pos.coords.latitude, pos.coords.longitude);
+                }, () => {
+                    efetivarRegistro(tipo, null, null);
+                });
+            } else {
+                efetivarRegistro(tipo, null, null);
+            }
+        }
+
+        function efetivarRegistro(tipo, lat, lon) {
+            const agora = new Date();
+            const data = agora.toLocaleDateString('pt-br');
+            const hora = agora.toLocaleTimeString('pt-br');
+            let logs = JSON.parse(localStorage.getItem('logs_f_' + user.cpf)) || {};
+            if(!logs[data]) logs[data] = { e: null, s: null };
+            if(tipo === 'Entrada') logs[data].e = hora; 
+            else logs[data].s = hora;
+            localStorage.setItem('logs_f_' + user.cpf, JSON.stringify(logs));
+            atualizarStatus();
+            alert(`${tipo} registrado!`);
+        }
+
+        function atualizarStatus() {
+            const hoje = new Date().toLocaleDateString('pt-br');
+            const logs = JSON.parse(localStorage.getItem('logs_f_' + user.cpf)) || {};
+            const r = logs[hoje] || { e: null, s: null };
+            document.getElementById('infoEntrada').textContent = `Entrada: ${r.e || '--:--'}`;
+            document.getElementById('infoSaida').textContent = `Saída: ${r.s || '--:--'}`;
+            document.getElementById('btnEntrada').disabled = r.e !== null;
+            document.getElementById('btnSaida').disabled = r.s !== null;
+        }
+
+        function abrirRelatorio() {
+            document.getElementById('telaPainel').classList.add('hidden');
+            document.getElementById('telaRelatorio').classList.remove('hidden');
+            const agora = new Date();
+            const mes = agora.getMonth();
+            const ano = agora.getFullYear();
+            
+            document.getElementById('dadosFunc').innerHTML = `<b>COLABORADOR:</b> ${user.nome.toUpperCase()}<br><b>CPF:</b> ${user.cpf}<br><b>COMPETÊNCIA:</b> ${agora.toLocaleString('pt-br', {month: 'long'}).toUpperCase()} / ${ano}`;
+            document.getElementById('assinaturaNome').textContent = user.nome.toUpperCase();
+
+            const logs = JSON.parse(localStorage.getItem('logs_f_' + user.cpf)) || {};
+            const corpo = document.getElementById('corpoFolha');
+            corpo.innerHTML = "";
+
+            for(let d = 1; d <= new Date(ano, mes + 1, 0).getDate(); d++) {
+                const dt = new Date(ano, mes, d);
+                const dtS = dt.toLocaleDateString('pt-br');
+                const sem = dt.toLocaleString('pt-br', {weekday: 'short'}).toUpperCase().replace('.','');
+                const mm = (mes+1).toString().padStart(2,'0');
+                const reg = logs[dtS] || { e:'', s:'' };
+                
+                let obs = "";
+                if(feriadosFixos[`${d.toString().padStart(2,'0')}/${mm}`]) obs = feriadosFixos[`${d.toString().padStart(2,'0')}/${mm}`];
+                else if((mes===11 && d>=20)||(mes===0 && d<=6)) obs = "RECESSO";
+                else if(dt.getDay()===0 || dt.getDay()===6) obs = "FDS";
+
+                corpo.innerHTML += `<tr class="${obs ? 'fds' : ''}">
+                    <td><b>${d.toString().padStart(2,'0')}</b>/${mm}/${ano}</td>
+                    <td>${sem}</td>
+                    <td>${reg.e}</td>
+                    <td>${reg.s}</td>
+                    <td style="font-size:0.65rem; color:#666">${obs}</td>
+                </tr>`;
+            }
+        }
+
+        function voltar() {
+            document.getElementById('telaRelatorio').classList.add('hidden');
+            document.getElementById('telaPainel').classList.remove('hidden');
+        }
+
+        document.getElementById('btnSair').addEventListener('click', function() {
+            if(confirm("Deseja sair?")) {
+                localStorage.removeItem('user_ponto_final');
+                window.location.reload();
+            }
+        });
+
+        if(user) abrirPainel();
+    </script>
+</body>
+</html>
